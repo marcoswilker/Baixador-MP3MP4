@@ -3,10 +3,10 @@ import yt_dlp
 import os
 import tempfile
 
-# Configuração da Página
+# 1. Configuração da Página
 st.set_page_config(page_title="Download Pro", page_icon="⚡", layout="centered")
 
-# Estilo visual para o botão
+# Estilo visual para o botão (CSS)
 st.markdown("""
     <style>
     div.stButton > button:first-child {
@@ -14,13 +14,14 @@ st.markdown("""
         color: white;
         border-radius: 10px;
         width: 100%;
+        font-weight: bold;
     }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("⚡ YouTube Downloader Pro")
 
-# --- FORMULÁRIO ---
+# --- FORMULÁRIO DE INTERFACE ---
 with st.form("baixador"):
     video_url = st.text_input("🔗 Link do YouTube:", placeholder="Cole o link aqui...")
     
@@ -31,3 +32,79 @@ with st.form("baixador"):
         qualidade = st.select_slider("🌟 Qualidade:", options=["Baixa", "Média", "Alta"])
     
     submit = st.form_submit_button("🚀 INICIAR EXTRAÇÃO")
+
+# --- LÓGICA DE DOWNLOAD ---
+def baixar_midia(url, formato_escolhido, qualidade_escolhida):
+    temp_dir = tempfile.gettempdir()
+    
+    # Mapeamento de qualidade para o yt-dlp
+    qualidade_map = {
+        "Baixa": "worst",
+        "Média": "intermediate",
+        "Alta": "best"
+    }
+    q = qualidade_map[qualidade_escolhida]
+
+    # Cabeçalhos para evitar o Erro 403 (Forbidden)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+    }
+
+    common_opts = {
+        'outtmpl': f'{temp_dir}/%(title)s.%(ext)s',
+        'restrictfilenames': True,
+        'noplaylist': True,
+        'http_headers': headers,
+        'compat_opts': ['force-ipv4'],
+        'extractor_args': {'youtube': {'player_client': ['web', 'android']}},
+    }
+
+    if "MP4" in formato_escolhido:
+        ydl_opts = {
+            **common_opts,
+            'format': f'{q}video+bestaudio/best',
+            'merge_output_format': 'mp4',
+        }
+    else:
+        ydl_opts = {
+            **common_opts,
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+        }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        filename = ydl.prepare_filename(info)
+        if "MP3" in formato_escolhido:
+            filename = os.path.splitext(filename)[0] + ".mp3"
+        return filename
+
+# --- AÇÃO AO CLICAR ---
+if submit:
+    if not video_url:
+        st.warning("⚠️ Por favor, cole um link válido do YouTube.")
+    else:
+        try:
+            with st.spinner("⏳ Processando... Isso pode levar alguns segundos."):
+                caminho_arquivo = baixar_midia(video_url, formato, qualidade)
+                
+                with open(caminho_arquivo, "rb") as f:
+                    st.success("✅ Extração concluída com sucesso!")
+                    st.download_button(
+                        label="📥 Baixar para o meu dispositivo",
+                        data=f,
+                        file_name=os.path.basename(caminho_arquivo),
+                        mime="video/mp4" if "MP4" in formato else "audio/mpeg"
+                    )
+        except Exception as e:
+            st.error(f"❌ Erro ao processar: {e}")
+
+st.info("Nota: O processamento ocorre no servidor e o download final é feito no seu navegador.")
