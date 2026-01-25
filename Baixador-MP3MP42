@@ -1,0 +1,33 @@
+import streamlit as st
+import yt_dlp
+import os
+import tempfile
+
+# Configuração da Página
+st.set_page_config(page_title="Download Pro", page_icon="⚡", layout="centered")
+
+# Estilo visual para o botão
+st.markdown("""
+    <style>
+    div.stButton > button:first-child {
+        background-color: #FF0000;
+        color: white;
+        border-radius: 10px;
+        width: 100%;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("⚡ YouTube Downloader Pro")
+
+# --- FORMULÁRIO ---
+with st.form("baixador"):
+    video_url = st.text_input("🔗 Link do YouTube:", placeholder="Cole o link aqui...")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        formato = st.selectbox("💿 Formato:", ["MP4 (Vídeo)", "MP3 (Áudio)"])
+    with col2:
+        qualidade = st.select_slider("🌟 Qualidade:", options=["Baixa", "Média", "Alta"])
+    
+    submit = st.form_submit_button("🚀 INICIAR EXTRAÇÃO")
